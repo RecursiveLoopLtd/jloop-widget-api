@@ -9,9 +9,9 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks("grunt-browserify");
 
   grunt.initConfig({
-    apiSrcDir: "api",
-    apiBuildDir: "dist/api",
-    apiTestDir: "api/test",
+    apiSrcDir: "src",
+    apiBuildDir: "dist",
+    apiTestDir: "src/test",
     pkg: grunt.file.readJSON("package.json"),
     banner: "/*!\n" +
             " * <%= pkg.name %>\n" +

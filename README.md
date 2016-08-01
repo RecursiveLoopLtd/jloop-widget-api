@@ -1,6 +1,5 @@
-#Barebones AngularJS Application
+JLoop-Widget-API
+================
 
-To get started, run
-    npm install
+A small JavaScript library that wraps the REST API calls, handles sessions, and other low-level functions.
 
-If run as root npm downgrades its permissions to nobody to run scripts, which causes **bower install** to fail.

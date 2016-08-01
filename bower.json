@@ -11,9 +11,12 @@
   "license": "Proprietary",
   "private": true,
   "ignore": [
-    "**/.*",
+    "*.*",
     "node_modules",
-    "vendor"
+    "src",
+    "test",
+    "vendor",
+    ".gitignore"
   ],
   "dependencies": {
   }
