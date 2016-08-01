@@ -5,6 +5,9 @@
     "Rob Jinman <admin@robjinman.com>"
   ],
   "description": "The JLoop widget API",
+  "main": [
+    "dist/jloop.min.js"
+  ],
   "license": "Proprietary",
   "private": true,
   "ignore": [
