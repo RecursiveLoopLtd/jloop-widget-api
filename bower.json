@@ -6,7 +6,7 @@
   ],
   "description": "The JLoop widget API",
   "main": [
-    "dist/jloop.min.js"
+    "dist/jloop-compiled.js"
   ],
   "license": "Proprietary",
   "private": true,
