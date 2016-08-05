@@ -9,7 +9,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks("grunt-browserify");
 
   grunt.initConfig({
-    apiSrcDir: "src",
+    apiSrcDir: "src/js",
     apiBuildDir: "dist",
     apiTestSrcDir: "src/test",
     apiTestBuildDir: "src/test/build",
@@ -43,7 +43,7 @@ module.exports = function(grunt) {
     },
     jshint: {
       all: [
-        "<%= apiSrcDir %>/js/**/*.js"
+        "<%= apiSrcDir %>/**/*.js"
       ]
     },
     karma: {
@@ -61,7 +61,7 @@ module.exports = function(grunt) {
     watch: {
       apiJs: {
         files: [
-          "<%= apiSrcDir %>/js/**/*.js"
+          "<%= apiSrcDir %>/**/*.js"
         ],
         tasks: ["buildJs"]
       }
@@ -73,7 +73,7 @@ module.exports = function(grunt) {
         version: "<%= pkg.version %>",
         url: "<%= pkg.homepage %>",
         options: {
-          paths: ["<%= apiSrcDir %>/js"],
+          paths: ["<%= apiSrcDir %>"],
           outdir: "docs"
         }
       }
