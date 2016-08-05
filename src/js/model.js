@@ -84,6 +84,31 @@ function ServerEndpoint(spec) {
   this.url = spec.url;
 };
 
+function Transcript(spec) {
+  spec = spec || {};
+
+  // List of Event objects
+  this.events = [];
+
+  if (spec.events) {
+    for (var i = 0; i < spec.events.length; ++i) {
+      this.events.push(fromPojo(spec.events[i]));
+    }
+  }
+};
+
+Transcript.prototype.addEvent = function(event) {
+  this.events.push(event);
+};
+
+Transcript.prototype.clear = function() {
+  this.events = [];
+};
+
+Transcript.prototype.isEmpty = function() {
+  return this.events.length === 0;
+};
+
 function fromPojo(pojo) {
   switch (pojo.eventType) {
     case "VisitorMessage":
@@ -113,6 +138,7 @@ module.exports = {
   AgentStatus: AgentStatus,
   AgentList: AgentList,
   ServerEndpoint: ServerEndpoint,
+  Transcript: Transcript,
   fromPojo: fromPojo
 };
 

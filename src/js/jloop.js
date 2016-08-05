@@ -1,8 +1,9 @@
 var config = require("./config");
 var model = require("./model");
-var session = require("./session");
+var sessions = require("./session");
 var utils = require("./utils");
 var err = require("./exceptions");
+var syncedTranscript = require("./syncedTranscript");
 
 /**
  * @class JLoopChat
@@ -12,46 +13,6 @@ var jLoopChat = function(spec, my) {
   //
   var _fnOnAgentMessage = null;
   var _fnOnAgentStatusChange = null;
-
-  function _addToTranscript(e) {
-    var transcript = session.get("transcript", session.Transcript);
-    transcript.addEvent(e);
-  }
-
-  function _checkInitialised() {
-    if (my.initialised === false) {
-      throw new err.JLoopException("jLoopChat not initialised");
-    }
-  }
-
-  function _onAgentMessage(e) {
-    if (_fnOnAgentMessage) {
-      _fnOnAgentMessage(e);
-    }
-  }
-
-  function _onAgentStatusChange(e) {
-    if (_fnOnAgentStatusChange) {
-      _fnOnAgentStatusChange(e);
-    }
-  }
-
-  function _onMessage(m) {
-    var e = JSON.parse(m.data);
-    console.log(e);
-
-    _addToTranscript(e);
-
-    if (e.eventType == "AgentMessage") {
-      _onAgentMessage(e);
-    }
-    else if (e.eventType == "AgentStatusChange") {
-      _onAgentStatusChange(e);
-    }
-    else {
-      throw new err.JLoopException("Unknown event type '" + eventType + "'");
-    }
-  }
 
   // Protected
   //
@@ -64,11 +25,9 @@ var jLoopChat = function(spec, my) {
   //
   var that = {};
   that.customerId = spec.customerId;
-  that.visitorId = null;
-
-  that.getTranscript = function() {
-    return session.get("transcript", session.Transcript);
-  };
+  that.visitorId = utils.generateUuid();
+  that.session = sessions.session(spec.uniquePrefix || "jl");
+  that.transcript = syncedTranscript(that.session);
 
   that.setOnAgentMessage = function(fn) {
     _fnOnAgentMessage = fn;
@@ -84,7 +43,7 @@ var jLoopChat = function(spec, my) {
   * @param {Function} fnFailure (Optional) A no argument function
   */
   that.initialise = function(fnSuccess, fnFailure) {
-    that.visitorId = session.get("visitorId");
+    that.visitorId = that.session.get("visitorId");
 
     var xhttp = new XMLHttpRequest();
     xhttp.open("GET", "http://" + config.serverLookupBaseUri + "/endpoint?cid=" + that.customerId, true);
@@ -139,7 +98,7 @@ var jLoopChat = function(spec, my) {
   that.sendMessage = function(msg) {
     _checkInitialised();
 
-    _addToTranscript(msg);
+    that.transcript.addEvent(msg);
 
     console.log("Sending...");
     console.log(msg);
@@ -162,7 +121,7 @@ var jLoopChat = function(spec, my) {
       status: "online"
     });
 
-    _addToTranscript(event);
+    that.transcript.addEvent(event);
 
     console.log("Sending..."); // TODO
     console.log(event);
@@ -186,7 +145,7 @@ var jLoopChat = function(spec, my) {
       status: "offline"
     });
 
-    _addToTranscript(event);
+    that.transcript.addEvent(event);
 
     console.log("Sending..."); // TODO
     console.log(event);
@@ -197,12 +156,48 @@ var jLoopChat = function(spec, my) {
   };
 
   return that;
+
+  // PRIVATE FUNCTIONS
+
+  function _checkInitialised() {
+    if (my.initialised === false) {
+      throw new err.JLoopException("jLoopChat not initialised");
+    }
+  }
+
+  function _onAgentMessage(e) {
+    if (_fnOnAgentMessage) {
+      _fnOnAgentMessage(e);
+    }
+  }
+
+  function _onAgentStatusChange(e) {
+    if (_fnOnAgentStatusChange) {
+      _fnOnAgentStatusChange(e);
+    }
+  }
+
+  function _onMessage(m) {
+    var e = JSON.parse(m.data);
+    console.log(e);
+
+    that.transcript.addEvent(e);
+
+    if (e.eventType == "AgentMessage") {
+      _onAgentMessage(e);
+    }
+    else if (e.eventType == "AgentStatusChange") {
+      _onAgentStatusChange(e);
+    }
+    else {
+      throw new err.JLoopException("Unknown event type '" + eventType + "'");
+    }
+  }
 };
 
 module.exports = {
   jLoopChat: jLoopChat,
   model: model,
-  session: session,
   error: err
 };
 

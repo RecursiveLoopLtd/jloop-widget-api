@@ -11,7 +11,8 @@ module.exports = function(grunt) {
   grunt.initConfig({
     apiSrcDir: "src",
     apiBuildDir: "dist",
-    apiTestDir: "src/test",
+    apiTestSrcDir: "src/test",
+    apiTestBuildDir: "src/test/build",
     pkg: grunt.file.readJSON("package.json"),
     banner: "/*!\n" +
             " * <%= pkg.name %>\n" +
@@ -47,12 +48,12 @@ module.exports = function(grunt) {
     },
     karma: {
       unit: {
-        configFile: "<%= apiTestDir %>/karma-unit.conf.js",
+        configFile: "<%= apiTestSrcDir %>/karma-unit.conf.js",
         autoWatch: false,
         singleRun: true
       },
       unit_auto: {
-        configFile: "<%= apiTestDir %>/karma-unit.conf.js",
+        configFile: "<%= apiTestSrcDir %>/karma-unit.conf.js",
         autoWatch: true,
         singleRun: false
       }
@@ -81,8 +82,8 @@ module.exports = function(grunt) {
 
   grunt.registerTask("clean", ["shell"]);
   grunt.registerTask("docs", ["yuidoc"]);
-  grunt.registerTask("test", ["karma:unit_auto"]);
-  grunt.registerTask("buildJs", [/*test, */"browserify", "uglify", "docs"]);
+  grunt.registerTask("test", ["karma:unit"]);
+  grunt.registerTask("buildJs", ["test", "browserify", "uglify", "docs"]);
   grunt.registerTask("build", ["buildJs"]);
   grunt.registerTask("run", ["connect:server"]);
 };
