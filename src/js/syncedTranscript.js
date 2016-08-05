@@ -11,7 +11,7 @@ function syncedTranscript(session) {
 
   function clear() {
     _transcript.clear();
-    _session.put(_transcript);
+    _session.put("transcript", _transcript);
   }
 
   function isEmpty() {

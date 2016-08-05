@@ -25,7 +25,6 @@ var jLoopChat = function(spec, my) {
   //
   var that = {};
   that.customerId = spec.customerId;
-  that.visitorId = utils.generateUuid();
   that.session = sessions.session(spec.uniquePrefix || "jl");
   that.transcript = syncedTranscript(that.session);
 
@@ -43,18 +42,14 @@ var jLoopChat = function(spec, my) {
   * @param {Function} fnFailure (Optional) A no argument function
   */
   that.initialise = function(fnSuccess, fnFailure) {
-    that.visitorId = that.session.get("visitorId");
-
     var xhttp = new XMLHttpRequest();
     xhttp.open("GET", "http://" + config.serverLookupBaseUri + "/endpoint?cid=" + that.customerId, true);
     xhttp.onreadystatechange = function() {
       if (xhttp.readyState == 4) {
         if (xhttp.status == 200) {
           my.endpoint = new model.ServerEndpoint(JSON.parse(xhttp.responseText));
-          var baseUrl = my.endpoint.url.replace(/^.*?:\/\//g, "");
 
-          my.websocket = new WebSocket("ws://" + baseUrl + "/api/customer/" + that.customerId + "/socket/" + that.visitorId);
-          my.websocket.onmessage = _onMessage;
+          _createWebsocket();
           my.initialised = true;
 
           fnSuccess();
@@ -114,7 +109,7 @@ var jLoopChat = function(spec, my) {
     _checkInitialised();
 
     var event = new model.VisitorStatusChange({
-      visitorId: that.visitorId,
+      visitorId: that.session.getId(),
       visitorName: visitorName,
       customerId: that.customerId,
       agentId: agentId,
@@ -138,7 +133,7 @@ var jLoopChat = function(spec, my) {
     _checkInitialised();
 
     var event = new model.VisitorStatusChange({
-      visitorId: that.visitorId,
+      visitorId: that.session.getId(),
       visitorName: visitorName,
       customerId: that.customerId,
       agentId: agentId,
@@ -155,6 +150,13 @@ var jLoopChat = function(spec, my) {
     return event;
   };
 
+  that.reset = function(visitorName, agentId) {
+    that.closeConnection(visitorName, agentId);
+    that.session.clear();
+    that.transcript.clear();
+    _createWebsocket();
+  };
+
   return that;
 
   // PRIVATE FUNCTIONS
@@ -163,6 +165,16 @@ var jLoopChat = function(spec, my) {
     if (my.initialised === false) {
       throw new err.JLoopException("jLoopChat not initialised");
     }
+  }
+
+  function _createWebsocket() {
+    if (my.websocket !== null) {
+      my.websocket.close();
+    }
+
+    var baseUrl = my.endpoint.url.replace(/^.*?:\/\//g, "");
+    my.websocket = new WebSocket("ws://" + baseUrl + "/api/customer/" + that.customerId + "/socket/" + that.session.getId());
+    my.websocket.onmessage = _onMessage;
   }
 
   function _onAgentMessage(e) {

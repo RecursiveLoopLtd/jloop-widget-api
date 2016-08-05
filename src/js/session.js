@@ -1,12 +1,25 @@
 function session(uniquePrefix) {
-  var _lifetime = 24 * 60 * 60;
   var _naming_prefix = uniquePrefix || "jl";
+  var _id = _get("sessionId");
+  var _lifetime = 24 * 60 * 60;
+
+  if (_id === null) {
+    clear();
+  }
+
+  if (hasExpired()) {
+    clear();
+  }
 
   /**
    * @method setLifetime
    * @param {Number} seconds
    */
   function setLifetime(seconds) {
+    if (hasExpired()) {
+      clear();
+    }
+
     _lifetime = seconds;
     _put("_expirationDate", (new Date()).getTime() + _lifetime * 1000);
   }
@@ -37,6 +50,7 @@ function session(uniquePrefix) {
       }
     }
 
+    _resetId();
     _put("_expirationDate", (new Date()).getTime() + _lifetime * 1000);
   }
 
@@ -53,13 +67,22 @@ function session(uniquePrefix) {
     return _get(key, type);
   }
 
+  function getId() {
+    if (hasExpired()) {
+      clear();
+    }
+
+    return _id;
+  }
+
   return {
     setLifetime: setLifetime,
     put: put,
     remove: remove,
     clear: clear,
     hasExpired: hasExpired,
-    get: get
+    get: get,
+    getId: getId
   };
 
   // PRIVATE FUNCTIONS
@@ -88,6 +111,20 @@ function session(uniquePrefix) {
 
   function _remove(key) {
     localStorage.removeItem(_k(key));
+  }
+
+  function _resetId() {
+    _id = _generateUuid();
+    _put("sessionId", _id);
+  }
+
+  function _generateUuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0;
+      var v = c == 'x' ? r : (r & 0x3 | 0x8);
+
+      return v.toString(16);
+    });
   }
 }
 

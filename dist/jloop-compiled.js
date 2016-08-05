@@ -54,7 +54,6 @@ var jLoopChat = function(spec, my) {
   //
   var that = {};
   that.customerId = spec.customerId;
-  that.visitorId = utils.generateUuid();
   that.session = sessions.session(spec.uniquePrefix || "jl");
   that.transcript = syncedTranscript(that.session);
 
@@ -72,18 +71,14 @@ var jLoopChat = function(spec, my) {
   * @param {Function} fnFailure (Optional) A no argument function
   */
   that.initialise = function(fnSuccess, fnFailure) {
-    that.visitorId = that.session.get("visitorId");
-
     var xhttp = new XMLHttpRequest();
     xhttp.open("GET", "http://" + config.serverLookupBaseUri + "/endpoint?cid=" + that.customerId, true);
     xhttp.onreadystatechange = function() {
       if (xhttp.readyState == 4) {
         if (xhttp.status == 200) {
           my.endpoint = new model.ServerEndpoint(JSON.parse(xhttp.responseText));
-          var baseUrl = my.endpoint.url.replace(/^.*?:\/\//g, "");
 
-          my.websocket = new WebSocket("ws://" + baseUrl + "/api/customer/" + that.customerId + "/socket/" + that.visitorId);
-          my.websocket.onmessage = _onMessage;
+          _createWebsocket();
           my.initialised = true;
 
           fnSuccess();
@@ -143,7 +138,7 @@ var jLoopChat = function(spec, my) {
     _checkInitialised();
 
     var event = new model.VisitorStatusChange({
-      visitorId: that.visitorId,
+      visitorId: that.session.getId(),
       visitorName: visitorName,
       customerId: that.customerId,
       agentId: agentId,
@@ -167,7 +162,7 @@ var jLoopChat = function(spec, my) {
     _checkInitialised();
 
     var event = new model.VisitorStatusChange({
-      visitorId: that.visitorId,
+      visitorId: that.session.getId(),
       visitorName: visitorName,
       customerId: that.customerId,
       agentId: agentId,
@@ -184,6 +179,13 @@ var jLoopChat = function(spec, my) {
     return event;
   };
 
+  that.reset = function(visitorName, agentId) {
+    that.closeConnection(visitorName, agentId);
+    that.session.clear();
+    that.transcript.clear();
+    _createWebsocket();
+  };
+
   return that;
 
   // PRIVATE FUNCTIONS
@@ -192,6 +194,16 @@ var jLoopChat = function(spec, my) {
     if (my.initialised === false) {
       throw new err.JLoopException("jLoopChat not initialised");
     }
+  }
+
+  function _createWebsocket() {
+    if (my.websocket !== null) {
+      my.websocket.close();
+    }
+
+    var baseUrl = my.endpoint.url.replace(/^.*?:\/\//g, "");
+    my.websocket = new WebSocket("ws://" + baseUrl + "/api/customer/" + that.customerId + "/socket/" + that.session.getId());
+    my.websocket.onmessage = _onMessage;
   }
 
   function _onAgentMessage(e) {
@@ -379,14 +391,27 @@ module.exports = {
 
 },{"./exceptions":2,"./utils":8}],6:[function(require,module,exports){
 function session(uniquePrefix) {
-  var _lifetime = 24 * 60 * 60;
   var _naming_prefix = uniquePrefix || "jl";
+  var _id = _get("sessionId");
+  var _lifetime = 24 * 60 * 60;
+
+  if (_id === null) {
+    clear();
+  }
+
+  if (hasExpired()) {
+    clear();
+  }
 
   /**
    * @method setLifetime
    * @param {Number} seconds
    */
   function setLifetime(seconds) {
+    if (hasExpired()) {
+      clear();
+    }
+
     _lifetime = seconds;
     _put("_expirationDate", (new Date()).getTime() + _lifetime * 1000);
   }
@@ -417,6 +442,7 @@ function session(uniquePrefix) {
       }
     }
 
+    _resetId();
     _put("_expirationDate", (new Date()).getTime() + _lifetime * 1000);
   }
 
@@ -433,13 +459,22 @@ function session(uniquePrefix) {
     return _get(key, type);
   }
 
+  function getId() {
+    if (hasExpired()) {
+      clear();
+    }
+
+    return _id;
+  }
+
   return {
     setLifetime: setLifetime,
     put: put,
     remove: remove,
     clear: clear,
     hasExpired: hasExpired,
-    get: get
+    get: get,
+    getId: getId
   };
 
   // PRIVATE FUNCTIONS
@@ -469,6 +504,20 @@ function session(uniquePrefix) {
   function _remove(key) {
     localStorage.removeItem(_k(key));
   }
+
+  function _resetId() {
+    _id = _generateUuid();
+    _put("sessionId", _id);
+  }
+
+  function _generateUuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0;
+      var v = c == 'x' ? r : (r & 0x3 | 0x8);
+
+      return v.toString(16);
+    });
+  }
 }
 
 module.exports = {
@@ -490,7 +539,7 @@ function syncedTranscript(session) {
 
   function clear() {
     _transcript.clear();
-    _session.put(_transcript);
+    _session.put("transcript", _transcript);
   }
 
   function isEmpty() {
@@ -540,20 +589,10 @@ function dictToArray(dict) {
   return res;
 }
 
-function generateUuid() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0;
-    var v = c == 'x' ? r : (r & 0x3 | 0x8);
-
-    return v.toString(16);
-  });
-}
-
 module.exports = {
   inherits: inherits,
   bind: bind,
-  dictToArray: dictToArray,
-  generateUuid: generateUuid
+  dictToArray: dictToArray
 };
 
 
